@@ -27,7 +27,7 @@ bot.onEvent = function(session, message) {
 }
 
 function onMessage(session, message) {
-  if (hasSessionStarted(session)) {
+  if (sessionIsActive(session)) {
     //sendSessionStatus(session)
     sendWelcomeMessage(session)
   } else {
@@ -35,7 +35,7 @@ function onMessage(session, message) {
   }
 }
 
-function hasSessionStarted(session) {
+function sessionIsActive(session) {
   let endOfSession = new Date((session.get('endDate') || null))
   return endOfSession != null && new Date() < endOfSession
 }
@@ -225,16 +225,45 @@ function sendSessionStatus(session) {
   let amountWagered = (session.get('paymentAmount') || 0)
   let rightWord = amountOfActivities == 1 ? "time" : "times"
 
-  let message = `The session runs until ${prettyEndDate}. In that time you need to exercise ${amountOfActivities} ${rightWord}. If you do, you'll get back ${amountWagered} ETH 🙏`
-  let controls = [
-    {type: 'button', label: '😅 Log an exercise session', value: 'status__newsession'},
-    {type: 'button', label: '😅 Check the status', value: 'status__checkstatus'},
-  ]
-  session.reply(SOFA.Message({
-    body: message,
-    controls: controls,
-    showKeyboard: false,
-  }))
+  if (amountOfActivities == 0 || !sessionIsActive(session)) {
+    handleSessionEnd(session, endOfSession, amountOfActivities, amountWagered)
+  } else {
+    let message = `The session runs until ${prettyEndDate}. In that time you need to exercise ${amountOfActivities} ${rightWord}. If you do, you'll get back ${amountWagered} ETH 🙏`
+    let controls = [
+      {type: 'button', label: '😅 Log an exercise session', value: 'status__newsession'},
+      {type: 'button', label: '😅 Check the status', value: 'status__checkstatus'},
+    ]
+    session.reply(SOFA.Message({
+      body: message,
+      controls: controls,
+      showKeyboard: false,
+    }))
+  }
+}
+
+
+function handleSessionEnd(session, endOfSession, amountOfActivities, amountWagered) {
+  if (amountOfActivities == 0) {
+    sendSuccess(session, amountWagered)
+  } else {
+    sendFailure(session)
+  }
+  clearSession(session)
+}
+
+function sendSuccess(session, amountWagered) {
+  sendMessage(session, "💪👊🏆😎💥 You made it! Congratulations!")
+  session.sendEth(amountWagered)
+}
+
+function sendFailure(session) {
+  sendMessage(session, "😥😥😥😥😥 You didn't make it. Don't be so hard on yourself though. You'll manage it next time 💪")
+}
+
+function clearSession(session) {
+  setEndDate(session, 0)
+  setActivityAmount(0)
+  setPaymentAmount(0)
 }
 
 // STORAGE
@@ -253,8 +282,10 @@ function setPaymentAmount(session, paymentAmount) {
 }
 
 function setHasExercised(session) {
-  let count = (session.get('numActivities') || 1) - 1
-  session.set('numActivities', count)
+  if (sessionIsActive(session)) {
+    let count = (session.get('numActivities') || 1) - 1
+    session.set('numActivities', count)
+  }
   sendSessionStatus(session)
 }
 
