@@ -21,13 +21,23 @@ bot.onEvent = function(session, message) {
       onPayment(session, message)
       break
     case 'PaymentRequest':
-      welcome(session)
+      sendWelcomeMessage(session)
       break
   }
 }
 
 function onMessage(session, message) {
-  sendWelcomeMessage(session)
+  if (hasSessionStarted(session)) {
+    //sendSessionStatus(session)
+    sendWelcomeMessage(session)
+  } else {
+    sendWelcomeMessage(session)
+  }
+}
+
+function hasSessionStarted(session) {
+  let endOfSession = new Date((session.get('endDate') || null))
+  return endOfSession != null && new Date() < endOfSession
 }
 
 function onCommand(session, command) {
@@ -93,6 +103,14 @@ function onCommand(session, command) {
     case 'paymentAmount100':
       sendPaymentRequest(session, 100)
       break
+
+    // Session
+    case 'status__checkstatus':
+      sendSessionStatus(session)
+      break
+    case 'status__newsession':
+      setHasExercised(session)
+      break
     }
 }
 
@@ -109,8 +127,8 @@ function onPayment(session, message) {
     // handle payments sent to the bot
     if (message.status == 'unconfirmed') {
       // payment has been sent to the ethereum network, but is not yet confirmed
-      setPaymentAmount(session, message.ethValue())
-      sendSessionStatus(session);
+      setPaymentAmount(session, message.ethValue)
+      sendSessionStatus(session)
     } else if (message.status == 'confirmed') {
       // handle when the payment is actually confirmed!
     } else if (message.status == 'error') {
@@ -168,7 +186,7 @@ function sendSessionStart(session, message) {
 
 // ACTIVITY AMOUNT
 function sendSetActivityAmount(session) {
-  let message = "How many times do you want to access during this period"
+  let message = "How many times do you want to exercise during this period?"
   let controls = [
     {type: 'button', label: '1', value: 'activityAmount1'},
     {type: 'button', label: '2', value: 'activityAmount2'},
@@ -201,14 +219,28 @@ function sendPaymentAmount(session) {
 }
 
 function sendSessionStatus(session) {
-  let count = (session.get('endDate') || 0)
-  sendMessage(session, `${count}`)
+  let endOfSession = new Date((session.get('endDate') || null))
+  var prettyEndDate = endOfSession.getDate()  + "-" + (endOfSession.getMonth()+1) + " " + endOfSession.getHours() + ":" + endOfSession.getMinutes();
+  let amountOfActivities = (session.get('numActivities') || 0)
+  let amountWagered = (session.get('paymentAmount') || 0)
+  let rightWord = amountOfActivities == 1 ? "time" : "times"
+
+  let message = `The session runs until ${prettyEndDate}. In that time you need to exercise ${amountOfActivities} ${rightWord}. If you do, you'll get back ${amountWagered} ETH 🙏`
+  let controls = [
+    {type: 'button', label: '😅 Log an exercise session', value: 'status__newsession'},
+    {type: 'button', label: '😅 Check the status', value: 'status__checkstatus'},
+  ]
+  session.reply(SOFA.Message({
+    body: message,
+    controls: controls,
+    showKeyboard: false,
+  }))
 }
 
 // STORAGE
 
 function setEndDate(session, numDays) {
-  let endDate = new Date().getDate() + numDays;
+  let endDate = new Date(new Date().getTime() + (numDays * 24 * 60 * 60 * 1000));
   session.set('endDate', endDate)
 }
 
@@ -218,6 +250,12 @@ function setActivityAmount(session, numActivities) {
 
 function setPaymentAmount(session, paymentAmount) {
   session.set('paymentAmount', paymentAmount)
+}
+
+function setHasExercised(session) {
+  let count = (session.get('numActivities') || 1) - 1
+  session.set('numActivities', count)
+  sendSessionStatus(session)
 }
 
 // MESSAGE SENDING
@@ -234,12 +272,4 @@ function sendPaymentRequest(session, usdAmount) {
   Fiat.fetch().then((toEth) => {
     session.requestEth(toEth.USD(usdAmount))
   })
-}
-
-
-// example of how to store state on each user
-function count(session) {
-  let count = (session.get('count') || 0) + 1
-  session.set('count', count)
-  sendMessage(session, `${count}`)
 }
