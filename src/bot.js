@@ -248,6 +248,7 @@ function handleSessionEnd(session, endOfSession, amountOfActivities, amountWager
     sendFailure(session)
   }
   clearSession(session)
+  sendSessionStart(session)
 }
 
 function sendSuccess(session, amountWagered) {
