@@ -18,7 +18,7 @@ bot.onEvent = function(session, message) {
       onCommand(session, message)
       break
     case 'Payment':
-      onPayment(session)
+      onPayment(session, message)
       break
     case 'PaymentRequest':
       welcome(session)
@@ -79,30 +79,26 @@ function onCommand(session, command) {
 
     // Activity amount commands
     case 'paymentAmount1':
-      setPaymentAmount(session, 1)
       sendPaymentRequest(session, 1)
       break
     case 'paymentAmount5':
-      setPaymentAmount(session, 5)
       sendPaymentRequest(session, 5)
       break
     case 'paymentAmount10':
-      setPaymentAmount(session, 10)
       sendPaymentRequest(session, 10)
       break
     case 'paymentAmount20':
-      setPaymentAmount(session, 20)
       sendPaymentRequest(session, 20)
       break
     case 'paymentAmount100':
-      setPaymentAmount(session, 100)
       sendPaymentRequest(session, 100)
       break
     }
 }
 
-function onPayment(session) {
-  sendMessage(session, `Thanks for the payment! 🙏`)
+function onPayment(session, message) {
+  setPaymentAmount(session, message.ethValue())
+  sendSessionStatus(session);
 }
 // STATES
 
@@ -184,6 +180,11 @@ function sendPaymentAmount(session) {
     controls: controls,
     showKeyboard: false,
   }))
+}
+
+function sendSessionStatus(session) {
+  let count = (session.get('endDate') || 0)
+  sendMessage(session, `${count}`)
 }
 
 // STORAGE
