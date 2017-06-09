@@ -28,8 +28,7 @@ bot.onEvent = function(session, message) {
 
 function onMessage(session, message) {
   if (sessionIsActive(session)) {
-    //sendSessionStatus(session)
-    sendWelcomeMessage(session)
+    sendSessionStatus(session)
   } else {
     sendWelcomeMessage(session)
   }
