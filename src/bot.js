@@ -220,7 +220,7 @@ function sendPaymentAmount(session) {
 
 function sendSessionStatus(session) {
   let endOfSession = new Date((session.get('endDate') || null))
-  var prettyEndDate = endOfSession.getDate()  + "-" + (endOfSession.getMonth()+1) + " " + endOfSession.getHours() + ":" + endOfSession.getMinutes();
+  var prettyEndDate = endOfSession.getDate()  + "-" + (endOfSession.getMonth()+1) + " " + endOfSession.getHours() + ":" + (endOfSession.getMinutes()<10?'0':'') + endOfSession.getMinutes();
   let amountOfActivities = (session.get('numActivities') || 0)
   let amountWagered = (session.get('paymentAmount') || 0)
   let rightWord = amountOfActivities == 1 ? "time" : "times"
